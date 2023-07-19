@@ -9,3 +9,5 @@ $64bit_softwares = Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVers
 
 $all_softwares = $32bit_softwares + $64bit_softwares
 
+Write-Host $all_softwares | Format-Table
+
