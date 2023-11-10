@@ -1,1 +1,14 @@
+List of all app pools 
+Step 1: Open command prompt and Run as administrator
+Step 2: Execute the command: cd %WINDIR%\system32\inetsrv
+Step 3: List all app pools: appcmd.exe list apppool
+Step 4: To count all started app pools: appcmd.exe list apppool /text:* | find /c "Started" 
+
+
+Identify 64-bit App Pool 
+Step 1: Open command prompt 
+Step 2: Go to c:\Windows\System32\inetsrv\ 
+Step 3: Run the commnad appcmd list apppool /enable32BitAppOnWin64:false 
+
+
 
