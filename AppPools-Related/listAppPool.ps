@@ -10,5 +10,7 @@ Step 1: Open command prompt
 Step 2: Go to c:\Windows\System32\inetsrv\ 
 Step 3: Run the commnad appcmd list apppool /enable32BitAppOnWin64:false 
 
+et-WmiObject Win32_Process -Filter "name = 'w3wp.exe'" | Select-Object  ProcessId,
+
 
 
