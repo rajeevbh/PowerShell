@@ -1,1 +1,199 @@
+# 1) Deletes logs older than X days on the share
+# 2) Determines whether the system is clustered
+# 3) Stops App Services
+# 4) Moves App Services to temp folder
+# 5) Starts App Services
+# 6) Zips logs to target share folder
+# 7) Purges temp folder
 
+
+# Location of Applicaion logs
+$LocalLogPath = "C:\AppServiceLogs"
+
+# Where are archived log zips stored? 
+$LogSharePath = "\\dccTestVM\SharedFolder\AppServiceLogs\Archive"
+
+# How many days of log zips should be retained? 
+$NumberOfDaysToRetainLogs = 14
+# NO UPDATES BELOW THIS POINT --------------
+
+# EVENT LOG INIT - Custom event log entries.
+#---------------------------------------
+if (![system.diagnostics.eventlog]::SourceExists("AppServiceLogArchival"))
+{
+	[system.diagnostics.EventLog]::CreateEventSource("AppServiceLogArchival", "Application")
+	Start-Sleep -s 2
+}
+
+$mylog = new-object System.diagnostics.Eventlog
+$myLog.Source = "AppServiceLogArchival"
+$myLog.WriteEntry("AppServiceLogArchival started.","Information",1)
+#---------------------------------------
+
+# TEST PARAMETERS FOR VALIDITY
+#---------------------------------------
+# Trim slashes
+$LocalLogPath.TrimEnd('\') | Out-Null
+$LocalLogPath.TrimEnd('/') | Out-Null
+$LogSharePath.TrimEnd('\') | Out-Null
+$LogSharePath.TrimEnd('/') | Out-Null
+
+if(!(Test-Path $LocalLogPath))
+{
+	Write-Host "Local log path $LocalLogPath is bogus. Update the parameter. Exiting." -fo Red
+	$myLog.WriteEntry("Local log path $LocalLogPath is bogus. Update the parameter. Exiting.","Error",2)
+	exit
+}
+if(!(Test-Path $LogSharePath))
+{
+	Write-Host "Archived log zip path $LogSharePath is bogus. Update the parameter. Exiting." -fo Red
+	$myLog.WriteEntry("Archived log zip path $LogSharePath is bogus. Update the parameter. Exiting.","Error",2)
+	exit
+}
+if(!($NumberOfDaysToRetainLogs.GetType().Name -eq "Int32"))
+{
+	Write-Host "The number of days of log retention parameter is bogus. Update it to an int. Exiting." -fo Red
+	$myLog.WriteEntry("The number of days of log retention parameter is bogus. Update it to an int. Exiting.","Error",2)
+	exit
+}
+#---------------------------------------
+
+#Temporary folder for move target and zip creation
+$TempFolder = $LocalLogPath + "\TEMP"
+Write-Host "Temp folder for log zips: $TempFolder"
+
+# FUNCTION DEFINITIONS
+function Stop-Dev-Services
+{
+	Param($list)
+	
+	foreach($service in $list)
+	{
+        # Send shutdown command to all relevant cluster resources without waiting for a response
+		Stop-ClusterResource $service -Wait 0
+	}
+
+    # Check if any are still shutting down, and wait for them
+	$shuttingdown = $true
+	while($shuttingdown)
+	{
+        Start-Sleep -Seconds 1
+        $FoundShuttingDown = 0
+		foreach($service in $list)
+		{
+            Write-Host $service.Name "is in state" $service.state
+			if($service.state -eq "OfflinePending")
+            {
+                # A resource is still shutting down, loop again to wait.
+                Write-Host "Waiting for $(service.name) to shut down"
+                $FoundShuttingDown = 1
+            }
+		}
+        if($FoundShuttingDown -ne 1)
+        {
+            $namelist = $list.Name -join(',')
+            # None were found shutting down, which means they are offline or failed. Quit loop and move on.
+            Write-Host "Shutdown complete for: $namelist"
+            $myLog.WriteEntry("Shutdown complete for: $namelist","Information",1)
+            $shuttingdown = $false
+        }
+	}
+}
+
+function Start-Dev-Services
+{
+	Param($list)
+	
+	foreach($service in $list)
+	{
+		Start-ClusterResource $service -Wait 0
+	}
+	# ADD RELIABILITY LOGIC? Or is initiating startup and walking away good enough?
+
+    $namelist = $list.Name -join(',')
+    Write-Host "Startup initiated for: $namelist"
+    $myLog.WriteEntry("Startup initiated for: $namelist","Information",1)
+}
+
+function Check-Cluster
+{
+	if((Get-WMIObject -Class MSCluster_ResourceGroup -ComputerName $env:computername -Namespace root\mscluster) -ne $null)
+	{ 
+        Write-Host "Cluster detected, assuming Devuction."
+		return $true
+    } 
+	else
+	{
+        Write-Host "No cluster detected, assuming non-Devuction."
+		return $false
+	}
+}
+
+function Purge-Old
+{
+	Param([int]$days,[String]$logpath)
+	
+	$limit = (Get-Date).AddDays(-$days)
+    Write-Host "Purging files older than $limit"
+	# Delete files modified older than the $limit.
+	Get-ChildItem -Path $logpath -File | Where-Object {($_.LastWriteTime -lt $limit) -and ($_.extension -like ".zip")} | Remove-Item -Force -Verbose
+}
+
+function Move-Logs
+{
+	if(Test-Path($TempFolder))
+	{
+		Remove-Item $TempFolder -Force -Recurse
+	}
+	New-Item -Path $TempFolder -ItemType directory | Out-Null
+	Move-Item -Path $LocalLogPath\*.log -Destination $TempFolder -Verbose
+    $a = Get-ChildItem -Path $TempFolder
+    $b = $a -join("`n")
+    Write-Host "The following logs will be zipped:`n$b`n"
+    $myLog.WriteEntry("The following logs will be zipped:`n$b","Information",1)
+}
+
+function Zip-Logs
+{
+	$filename = $env:computername + "_$(get-date -format yyyy-MM-dd_hh-mm).zip"
+	
+	Add-Type -assembly "system.io.compression.filesystem"
+	[io.compression.zipfile]::CreateFromDirectory($TempFolder, $LogSharePath + "\" + $filename)
+}
+# END FUNCTION DEFINTIONS
+
+# MAIN ---------------------------------
+#Purge share of old log zips
+Purge-Old $NumberOfDaysToRetainLogs $LogSharePath
+
+if(Check-Cluster)
+{
+	$ServiceResources = get-clusterresource | Where-Object {($_.ResourceType -eq "Generic Service") -and ($_.OwnerNode.Name -eq $env:computername)}
+	$AppServices = $ServiceResources | Where-Object {($_.Name -like "service1*") -or ($_.Name -like "service2*") -or ($_.Name -like "service3*") -or ($_.Name -like "service4*") -or ($_.Name -like "service5*")}
+    Write-Host "Service list: $AppServices"
+
+	Stop-Dev-Services($AppServices)
+	Move-Logs
+	Start-Dev-Services($AppServices)
+}
+else
+{
+	$LocalServices = Get-Service | Where-Object {($_.Name -like "service1*") -or ($_.Name -like "service2*") -or ($_.Name -like "service3*") -or ($_.Name -like "service4*") -or ($_.Name -like "service5*")}
+    Write-Host "Service list: $LocalServices"
+
+	foreach($service in $LocalServices)
+	{
+		Stop-Service $service
+	}
+	Move-Logs
+	foreach($service in $LocalServices)
+	{
+		Start-Service $service
+	}
+}
+
+Zip-Logs
+Remove-Item $TempFolder -Force -Recurse
+Write-Host "`nAppServiceLogArchival completed."
+$myLog.WriteEntry("AppServiceLogArchival completed.","Information",1)
+# END MAIN ---------------------------------
