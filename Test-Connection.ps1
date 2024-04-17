@@ -1,3 +1,5 @@
+Test-NetConnection -ComputerName xxxxx -Port 135
+
 # Loop
 $data = Get-Content -Path C:\DevOps\PowerShell\test.txt
 
