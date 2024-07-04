@@ -1,1 +1,10 @@
 
+# To create new file
+New-Item -Path Sample1.txt -ItemType File
+"This is my first statement" | Out-File Sample1.txt
+
+# To append into file
+"This is my second statement" | Out-File Sample1.txt -Append
+
+# To remove file
+Remove-Item .\Sample1.txt
