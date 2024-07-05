@@ -1,0 +1,10 @@
+
+Get-Service -Name Grafana
+
+Get-Service -Name Grafana | Stop-Service
+
+Get-Service -Name Grafana | Start-Service
+
+Get-Service -Name Grafana | Restart-Service
+
+Set-Service -Name Grafana -StartupType Manual
