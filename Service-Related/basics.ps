@@ -1,0 +1,21 @@
+Get-Service
+
+Get-Service -Name 'k*'
+
+Get-Service -Name '*r'
+
+Get-Service -Name Winmgmt
+
+Get-Service -Name Winmgmt | Select *
+
+Get-Service -Name 'vmi*' | Select Name, Status
+
+Get-Service | Where-Object {$_.Status -eq 'Running'}
+
+Get-Service | 
+    Where-Object { ($_.Status -eq 'Running') -and ($_.StartType -eq 'Manual')} |
+    Select Name, Status, StartType
+
+Get-Service | 
+    Where-Object { ($_.Status -eq 'Running') -and ($_.StartType -eq 'Manual')} |
+    Select Name, Status, StartType
