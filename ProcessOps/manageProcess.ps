@@ -1,1 +1,29 @@
+# List down all processess 
+Get-Process
+# List down all processes with name, Id, 
+
+Get-Process -Name notepad
+
+Get-Process -Name 'C*'
+
+Get-Process -Id 9508
+
+Get-Process -Name firefox | Select-Object *
+
+Get-Process -Name 'C*'| Select-Object -Property Name, Company, WorkingSet 
+
+Get-Process -Name 'C*'| Select-Object -Property Name, Company, WorkingSet | Format-Table
+
+Get-Process -Name 'C*'| Select-Object -Property Name, Company, WorkingSet | Format-List
+
+Get-Process -Name 'C*'| Select-Object -Property Name, Company, WorkingSet | Format-Table -AutoSize
+
+Get-Process -Name firefox | Out-GridView
+
+Get-Process -Name firefox | Select-Object * | Out-GridView 
+
+Get-Process -Name 'C*' | Where-Object { $_.Company -like 'Google*'}
+
+Get-Process -Name chrome | Stop-Process
+
 
