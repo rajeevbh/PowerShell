@@ -2,8 +2,8 @@
 #Get-Cluster | Select-Object -ExpandProperty Name
 $clusterName = "TestCluster"
 
-# Get 3 leter of hostname 
-$hostnamePrefix = ($env:COMPUTERNAME).Substring(0, 3)
+# Get 4 leter of hostname 
+$hostnamePrefix = ($env:COMPUTERNAME).Substring(0, 4)
 Write-Host "$hostnameprefix"
 
 # Get all cluster groups (roles)
