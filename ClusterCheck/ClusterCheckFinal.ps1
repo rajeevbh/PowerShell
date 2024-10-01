@@ -1,3 +1,7 @@
+# ClusterCheck.ps1 
+# Version 1.0
+# This script valiates the cluster availability whether all cluster roles are on single node and running
+
 try {
     # Get the cluster name
     $clusterName = Get-Cluster | Select-Object -ExpandProperty Name
