@@ -22,4 +22,3 @@ if ($uniqueNodes.Count -eq 1) {
 } else {
     Write-Output "Cluster roles are distributed across multiple nodes."
     }
-}
