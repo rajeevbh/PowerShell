@@ -1,19 +1,20 @@
 ## Critical Errors Alerting
 
 # Define the path to your log file
-$logFilePath = "C:\path\to\your\logfile.log"
+$logFilePath = "Log-File-Path"
 
 # Define the path to your error list file
-$errorListPath = "C:\path\to\errors.txt"
+$errorListPath = "Error-List-File-Path"  ## it should be reside in logic monitor "Pre-defined error list"
 
-# Check if both the log file and error list file exist
+# Check if the log file exist - Example Nexus logs, today event logs
 if (-not (Test-Path $logFilePath)) {
-    Write-Host "Log file not found: $logFilePath"
+    Write-Host "Plesae check configuraiton - Log file not found: $logFilePath"
     exit 1
 }
 
+# Check if the error list file path exist
 if (-not (Test-Path $errorListPath)) {
-    Write-Host "Error list file not found: $errorListPath"
+    Write-Host "Please check configuration - Error list file not found: $errorListPath"
     exit 1
 }
 
@@ -29,7 +30,7 @@ foreach ($line in $logLines) {
     foreach ($error in $errors) {
         if ($line -match $error) {
             $errorCount++
-            break  # Break inner loop if an error is found to avoid double counting
+            break 
         }
     }
 }
