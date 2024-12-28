@@ -1,4 +1,4 @@
-## Critical Errors Alerting
+## Critical Errors Alerting based on error pattern matching
 
 # Define the path to your log file
 $logFilePath = "Log-File-Path"
