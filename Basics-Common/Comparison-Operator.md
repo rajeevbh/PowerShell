@@ -19,3 +19,5 @@
 | `-is`  | Checks if an object is a specific type | `"Hello" -is [string]` → `$true` |
 | `-isnot`  | Checks if an object is not a specific type | `5 -isnot [string]` → `$true` |
 
+
+## To check case-sensitiveness add "c" at the begining. For example "ceq" instead of "eq"
